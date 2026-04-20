@@ -9,10 +9,22 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddControllers();
 
+// 1. Đăng ký dịch vụ Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
+
+// 2. Kích hoạt Swagger
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "API Của Minh v1");
+    c.RoutePrefix = string.Empty; // Mẹo: Vào thẳng localhost:5288 là thấy Swagger luôn, không cần gõ thêm gì
+});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

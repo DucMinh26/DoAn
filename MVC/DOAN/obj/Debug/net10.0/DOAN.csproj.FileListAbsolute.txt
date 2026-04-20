@@ -212,3 +212,17 @@ F:\DoAn\MVC\DOAN\bin\Debug\net10.0\runtimes\win-x64\native\e_sqlite3.dll
 F:\DoAn\MVC\DOAN\bin\Debug\net10.0\runtimes\win-x86\native\e_sqlite3.dll
 F:\DoAn\MVC\DOAN\obj\Debug\net10.0\DOAN.csproj.AssemblyReference.cache
 F:\DoAn\MVC\DOAN\obj\Debug\net10.0\DOAN.csproj.Up2Date
+F:\DoAN\MVC\DOAN\obj\Debug\net10.0\DOAN.sourcelink.json
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\Microsoft.IdentityModel.Abstractions.dll
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\Microsoft.IdentityModel.JsonWebTokens.dll
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\Microsoft.IdentityModel.Logging.dll
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.dll
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\Microsoft.IdentityModel.Tokens.dll
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\System.IdentityModel.Tokens.Jwt.dll
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\Microsoft.OpenApi.dll
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\Swashbuckle.AspNetCore.Swagger.dll
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+F:\DoAN\MVC\DOAN\bin\Debug\net10.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+F:\DoAN\MVC\DOAN\obj\Debug\net10.0\DOAN.MvcApplicationPartsAssemblyInfo.cs
