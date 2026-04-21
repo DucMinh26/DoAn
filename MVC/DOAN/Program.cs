@@ -1,50 +1,67 @@
 using DOAN.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Filters;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<AppDbContext>(options => 
+// 1. Cấu hình DbContext (Kết nối SQLite)
+builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddControllers();
-
-// 1. Đăng ký dịch vụ Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
-// Add services to the container.
+// 2. Cấu hình Swagger để thêm nút Ổ khóa (Authorize)
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+    {
+        Description = "Nhập token theo cú pháp: bearer {token}\nVí dụ: bearer eyJhbGciOiJIUzUxMi...",
+        In = ParameterLocation.Header,
+        Name ="Authorization",
+        Type = SecuritySchemeType.ApiKey
+    });
+
+    options.OperationFilter<SecurityRequirementsOperationFilter>();
+
+});
+
+// 3. Cấu hình JWT Authentication (Đọc Secret Key từ appsettings.json)
+var tokenSecret = builder.Configuration.GetSection("AppSettings:Token").Value;
+
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenSecret ?? "")),// dòng này là tạo 1 mã secretkey để khi người dùng đưang nhập sẽ bao gồm data + signatura=HASH(data +secretkey) rồi khi hệ thống nhận sẽ lại mã hóa 1 lần nữa signature2 = HASH(data + secretkey), nếu trên đường vận truyển mà phần data bị thay đổi mà vẫn secretkey không thể thay đổi được thì 2 cái sig vưới sig2 khác nhau
+                ValidateIssuer = false,// Tạm tắt cho môi trường Dev
+                ValidateAudience = false// Tạm tắt cho môi trường Dev
+            };
+
+        });
+
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-// 2. Kích hoạt Swagger
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+// 4. Cấu hình Pipeline (Thứ tự ở đây RẤT QUAN TRỌNG)
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "API Của Minh v1");
-    c.RoutePrefix = string.Empty; // Mẹo: Vào thẳng localhost:5288 là thấy Swagger luôn, không cần gõ thêm gì
-});
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
-
 app.UseHttpsRedirection();
-app.UseRouting();
 
+// Bắt buộc: Authentication (Xác thực ai là ai) phải nằm TRƯỚC Authorization (Phân quyền làm gì)
+app.UseAuthentication(); 
 app.UseAuthorization();
 
-app.MapStaticAssets();
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
-
+app.MapControllers();
 
 app.Run();

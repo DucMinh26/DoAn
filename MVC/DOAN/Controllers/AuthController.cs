@@ -4,6 +4,9 @@ using DOAN.Models;
 using DOAN.Models.Entites;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -29,7 +32,7 @@ public class AuthController : ControllerBase
             Username = request.Username,
             PasswordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(request.Password)),
             PasswordSalt = hmac.Key,
-            Role = "admin"
+            Role = "Staff"
         };
 
         _context.Users.Add(user);
@@ -60,9 +63,34 @@ public class AuthController : ControllerBase
 
     private string CreateToken(User user)
     {
-        // Logic tạo JWT dùng thư viện Microsoft.IdentityModel.Tokens
-        // (Tôi sẽ gửi chi tiết hàm này khi bạn bắt tay vào code)
-        return "JWT_TOKEN_CỦA_BẠN";
+        // 1. Khai báo các thông tin (Claims) sẽ nhét vào Token
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Role, user.Role)
+        };
+
+        var tokenSecret = _configuration.GetSection("Appsettings:Token").Value;
+        if (string.IsNullOrEmpty(tokenSecret))
+        {
+            throw new Exception("Chưa cấu hình AppSettings:Token trong appsettings.json");
+        }
+
+        //3.tạo chữ kí điện tử
+        var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(tokenSecret));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature); 
+        
+        
+        //4. Đóng gói token(thời hạn 1 ngày)
+        var token = new JwtSecurityToken(
+            claims:claims,
+            expires: DateTime.Now.AddDays(1),
+            signingCredentials: creds
+        );
+
+        // 5. Xuất ra chuỗi string
+        var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+        return jwt;
     }
 
 
