@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using DOAN.Data;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace DOAN.Controllers
@@ -84,6 +85,55 @@ namespace DOAN.Controllers
 
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetDocument()
+        {
+            try
+            {
+                var documents = await _context.Documents.AsNoTracking().ToListAsync();
+
+                return Ok(documents);
+            }
+
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi server khi lấy danh sách: {ex.Message}");
+            }
+        }
+
+
+        [HttpDelete("{id}")] //lấy id từ trong url
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> DeleteDocument(int id)
+        {
+            try
+            {
+                //1. Tìm trong database
+                var document = await _context.Documents.FindAsync(id);
+
+                if (document == null)
+                {
+                    return NotFound($"Không tìm thấy tài liệu với ID = {id}");
+                }
+
+                //2. Xóa file vật lý trên ổ cứng
+                if (System.IO.File.Exists(document.FilePath))
+                {
+                    System.IO.File.Delete(document.FilePath);
+                }
+
+                // 3. Xóa bản ghi trong Database
+                _context.Documents.Remove(document);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { Message = $"Đã xóa thành công tài liệu: {document.FileName}" });
+            }
+
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi server khi xóa tài liệu: {ex.Message}");
+            }
+        }
     }
 
 }
