@@ -9,6 +9,10 @@
 *.db-shm
 *.db-wal
 
+#Chặn push
+appsettings.json
+
+
 # dotenv files
 .env
 
