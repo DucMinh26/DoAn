@@ -22,7 +22,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Description = "Nhập token theo cú pháp: bearer {token}\nVí dụ: bearer eyJhbGciOiJIUzUxMi...",
         In = ParameterLocation.Header,
-        Name ="Authorization",
+        Name = "Authorization",
         Type = SecuritySchemeType.ApiKey
     });
 
@@ -33,20 +33,33 @@ builder.Services.AddSwaggerGen(options =>
 // 3. Cấu hình JWT Authentication (Đọc Secret Key từ appsettings.json)
 var tokenSecret = builder.Configuration.GetSection("AppSettings:Token").Value;
 
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(options =>
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenSecret ?? "")),// dòng này là tạo 1 mã secretkey để khi người dùng đưang nhập sẽ bao gồm data + signatura=HASH(data +secretkey) rồi khi hệ thống nhận sẽ lại mã hóa 1 lần nữa signature2 = HASH(data + secretkey), nếu trên đường vận truyển mà phần data bị thay đổi mà vẫn secretkey không thể thay đổi được thì 2 cái sig vưới sig2 khác nhau
-                ValidateIssuer = false,// Tạm tắt cho môi trường Dev
-                ValidateAudience = false// Tạm tắt cho môi trường Dev
-            };
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenSecret ?? "")),// dòng này là tạo 1 mã secretkey để khi người dùng đưang nhập sẽ bao gồm data + signatura=HASH(data +secretkey) rồi khi hệ thống nhận sẽ lại mã hóa 1 lần nữa signature2 = HASH(data + secretkey), nếu trên đường vận truyển mà phần data bị thay đổi mà vẫn secretkey không thể thay đổi được thì 2 cái sig vưới sig2 khác nhau
+            ValidateIssuer = false,// Tạm tắt cho môi trường Dev
+            ValidateAudience = false// Tạm tắt cho môi trường Dev
+        };
 
-        });
+    });
 
 builder.Services.AddControllersWithViews();
+
+
+// Cấu hình CORS để cho phép Frontend và Python gọi API
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin() //cho phep moi ten mien, cong
+                .AllowAnyMethod() //cho phep moi phuong thuc (get,post,put,delete)
+                .AllowAnyHeader(); // cho phep moi header
+    });
+});
+
 
 var app = builder.Build();
 
@@ -67,8 +80,11 @@ if (app.Environment.IsDevelopment())
 }
 app.UseHttpsRedirection();
 
+// Kích hoạt cổng CORS
+app.UseCors("AllowAll");
+
 // Bắt buộc: Authentication (Xác thực ai là ai) phải nằm TRƯỚC Authorization (Phân quyền làm gì)
-app.UseAuthentication(); 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
