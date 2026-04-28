@@ -12,6 +12,9 @@
 #Chặn push
 appsettings.json
 
+RagAiService/.venv/
+**/bin/
+**/obj/
 
 # dotenv files
 .env
