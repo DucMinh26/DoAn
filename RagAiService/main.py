@@ -11,7 +11,7 @@ app = FastAPI(
 )
 
 #Cấu hình CORS cho phép .NET hoặc web gọi API vào python
-app.add_middleware(
+app.add_middleware( 
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
