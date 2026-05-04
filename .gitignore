@@ -17,6 +17,7 @@ RagAiService/.venv/
 **/obj/
 
 # dotenv files
+.env/
 .env
 
 # User-specific files

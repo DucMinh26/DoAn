@@ -1,10 +1,18 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters.character import RecursiveCharacterTextSplitter
 import pdfplumber
 import chromadb
+import google.generativeai as genai 
+from dotenv import load_dotenv
 import os
 import io
+from pydantic import BaseModel
+from typing import Optional
+
+
+load_dotenv()
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 #Khởi tạo ứng dụng FastAPI
 app = FastAPI(
@@ -20,25 +28,34 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # ==========================================
-# KHỞI TẠO VECTOR DATABASE (CHROMADB)
+# CẤU HÌNH CHROMADB
 # ==========================================
 
-DB_PATH = "./data/chroma_db_data"
+
+DB_PATH = "F:/DoAn/RagAiService/data/chromaDB"
 try:
     chroma_client = chromadb.PersistentClient(path=DB_PATH)
-    print(f"Đã kết nốt thành công đến ChromaDB tại: {DB_PATH}")
+
+    collection = chroma_client.get_or_create_collection(
+        name="enterprise_knowledge",
+        embedding_function=None,
+    )
+
 except Exception as e:
-    print(f"Lỗi khi khởi tạo ChromaBD: {e}")
+    print(f"[CHROMA][ERROR] Lỗi khi khởi tạo ChromaDB: {type(e).__name__}: {e}")
 
-#Tạo 1 collection trong ChromaDB (tương tạo 1 bảng trong SQL)
-collection = chroma_client.get_or_create_collection(
-    name="enterprise_knowledge",
-    metadata={"hnsw:space":"cosine"}
-)
+# ==========================================
+# CÁC CLASS ĐỊNH DẠNG DỮ LIỆU (PYDANTIC MODELS)
+# ==========================================
 
+class SearchQuery(BaseModel): #khai báo lớp SearchQuery kế thừa BaseModel
+    query: str
+    document_id: Optional[str] =None #khai báo id là str còn nếu để trống thì là None
+    top_k: int=3
 # ==========================================
 # CÁC HÀM HỖ TRỢ (HELPER FUNCTIONS)
 # ==========================================
@@ -102,4 +119,66 @@ async def test_ingestion_pipeline(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi xử lý: {str(e)}")
 
+@app.post("/api/ingest")
+async def ingest_document(
+    file: UploadFile = File(...),
+    document_id: str = Form(...)
+):
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Chỉ hỗ trợ định dạng PDF")
 
+    try:
+        file_bytes = await file.read()
+        raw_text = extract_text_from_bytes(file_bytes)
+
+        if not raw_text.strip():
+            raise HTTPException(status_code=400, detail="PDF không có chữ")
+        
+        document_chunks = chunk_text(raw_text)
+
+        #Tạo các cột trong 1 bảng
+        documents_list = []
+        metadatas_list = []
+        ids_list = []
+        embeddings_list = []
+
+        print(f"Bắt đầu lấy Embedding từ Gemini cho {len(document_chunks)} đoạn...")
+
+        for i, chunk in enumerate(document_chunks):
+            print(f"Đang xử lý đoạn {i+1}/{len(document_chunks)}...")
+
+            result = genai.embed_content(
+                model="models/gemini-embedding-001",
+                content=chunk,
+                task_type="retrieval_document",
+            )
+
+            embeddings_list.append(result['embedding'])
+            documents_list.append(chunk)
+            metadatas_list.append({"document_id": document_id, "filename": file.filename})
+            ids_list.append(f"doc_{document_id}_chunk_{i}")
+
+        
+
+        print(f"Đang tạo vector cho {len(documents_list)} đoạn văn...")
+        # vectors = get_google_embeddings(document_list)
+        print("Đã tạo vector xong, đang lưu vào DB...")
+
+        collection.add(
+            documents=documents_list,
+            metadatas=metadatas_list,
+            ids=ids_list,
+            embeddings=embeddings_list
+        )
+        print("✅ Đã lưu xong vào ChromaDB!")
+        
+        return{
+            "status":"success",
+            "message":"Đã lưu tài liệu vào bộ não AI thành công",
+            "document_id":document_id,
+            "total_chunk_saved":len(document_chunks)
+        }
+    except Exception as e:
+        print(f"Lỗi: {str(e)}") # In ra terminal để dễ debug
+        raise HTTPException(status_code=500, detail=f"Lỗi hệ thống: {str(e)}")
+    
