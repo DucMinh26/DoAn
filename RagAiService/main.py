@@ -182,3 +182,61 @@ async def ingest_document(
         print(f"Lỗi: {str(e)}") # In ra terminal để dễ debug
         raise HTTPException(status_code=500, detail=f"Lỗi hệ thống: {str(e)}")
     
+@app.post("/api/search")
+async def search_document(request: SearchQuery ):
+
+    try:
+        print(f"Nhận yêu cầu tìm kiếm :'{request.query}")
+
+        #Embedding câu hỏi
+        result = genai.embed_content(
+            model="models/gemini-embedding-001",
+            content=request.query,
+            task_type="retrieval_query",
+        )
+
+        query_embedding = result['embedding']
+
+        print("Đã tạo Vector cho câu hỏi. Đang lục tìm trong ChromaDB...")
+
+        where_filter = None
+        if request.document_id:
+            where_filter = {"document_id":request.document_id}
+
+        search_result = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=request.top_k,
+            where=where_filter,
+        )
+        
+        if not search_result['documents'] or not search_result.get('documents') or len(search_result['documents'][0])==0:
+            return {
+                "status": "success",
+                "message": "Không tìm thấy thông tin phù hợp trong cơ sở dữ liệu.",
+                "data": []
+            }
+        
+        formatted_results=[]
+        documents=search_result.get('documents', [[]])[0] or []
+        metadatas=search_result.get('metadatas', [[]])[0] or []
+        distances=search_result.get('distances', [[]])[0] or []
+
+        for i in range(len(documents)):
+            formatted_results.append({
+                "chunk_content":documents[i],
+                "filename":metadatas[i].get("filename","unknown"),
+                "document_id":metadatas[i].get("document_id","unknown"),
+                "similarity_score":distances[i],
+            })
+
+        print(f"✅ Đã tìm thấy {len(formatted_results)} đoạn văn phù hợp.")
+
+        return {
+            "status": "success",
+            "query": request.query,
+            "data": formatted_results
+        }
+    
+    except Exception as e:
+            print(f"Lỗi truy xuất: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Lỗi khi tìm kiếm: {str(e)}")
