@@ -56,6 +56,11 @@ class SearchQuery(BaseModel): #khai báo lớp SearchQuery kế thừa BaseModel
     query: str
     document_id: Optional[str] =None #khai báo id là str còn nếu để trống thì là None
     top_k: int=3
+
+class ChatQuery(BaseModel):
+    query: str
+    document_id: Optional[str] = None
+    top_k: int=3
 # ==========================================
 # CÁC HÀM HỖ TRỢ (HELPER FUNCTIONS)
 # ==========================================
@@ -240,3 +245,92 @@ async def search_document(request: SearchQuery ):
     except Exception as e:
             print(f"Lỗi truy xuất: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Lỗi khi tìm kiếm: {str(e)}")
+
+@app.post("/api/chat")
+async def chat_with_document(request: ChatQuery):
+    try:
+        print(f"Bắt đầu xử lí câu hỏi: {request.query}")
+
+        # ---------------------------------------------------------
+        # BƯỚC 1: TRUY XUẤT NGỮ CẢNH (RETRIEVAL)
+        # ---------------------------------------------------------
+
+        result = genai.embed_content(
+            model="models/gemini-embedding-001",
+            content=request.query,
+            task_type="retrieval_query",
+        )
+
+        query_embedding=result['embedding']
+
+        if request.document_id:
+            where_filter={
+                "document_id":request.document_id
+            }
+        else:
+            where_filter=None
+
+        search_results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=request.top_k,
+            where=where_filter,
+        )
+
+        if not search_results['documents'] or not search_results.get('documents') or len(search_results['documents'][0]) ==0:
+            return{
+                "status":"success",
+                "answer":"Xin lỗi, tôi không tìm thấy tài liệu nào liên quan để trả lời câu hỏi này.",
+                "sources": []
+            }
+        
+        documents = search_results.get('documents', [[]])[0] or []
+        metadatas = search_results.get('metadatas', [[]])[0] or []
+        
+        # ---------------------------------------------------------
+        # BƯỚC 2: GOM NGỮ CẢNH (CONTEXT BUILDING)
+        # ---------------------------------------------------------
+
+        context_text = "\n\n---\n\n".join(documents)
+
+        source_file = list(set(meta.get("filename","unknown") for meta in metadatas))
+
+        # ---------------------------------------------------------
+        # BƯỚC 3: PROMPT ENGINEERING (Kỹ thuật đặt câu lệnh)
+        # ---------------------------------------------------------
+
+        prompt = f"""Bạn là một trợ lý ảo thông minh chuyên phân tích tài liệu nội bộ của doanh nghiệp.
+        Nhiệm vụ của bạn là trả lời câu hỏi của người dùng một cách chính xác, lịch sự và dễ hiểu.
+
+        Hãy tuân thủ NGHIÊM NGẶT các quy tắc sau:
+        1. CHỈ sử dụng thông tin từ phần NGỮ CẢNH CUNG CẤP bên dưới để trả lời.
+        2. Nếu NGỮ CẢNH không chứa thông tin để trả lời câu hỏi, hãy nói: "Xin lỗi, thông tin này không có trong tài liệu tôi được cung cấp." Tuyệt đối KHÔNG tự sáng tạo hoặc dùng kiến thức bên ngoài.
+        3. Nếu câu hỏi yêu cầu liệt kê, hãy dùng gạch đầu dòng cho dễ đọc.
+
+        NGỮ CẢNH CUNG CẤP:
+        {context_text}
+
+        CÂU HỎI CỦA NGƯỜI DÙNG:
+        {request.query}
+        """
+
+        # ---------------------------------------------------------
+        # BƯỚC 4: SINH CÂU TRẢ LỜI 
+        # ---------------------------------------------------------
+
+        print("Đang gửi ngữ cảnh cho Gemini để tổng hợp câu trả lời...")
+        model=genai.GenerativeModel("models/gemini-2.5-flash")
+
+        rep = model.generate_content(prompt)
+
+        print("✅ Đã sinh câu trả lời thành công!")
+
+        return{
+            "status":"success",
+            "question":request.query,
+            "answer":rep.text,
+            "sources":source_file,
+        }
+    
+    except Exception as e:
+        print(f"Lỗi hệ thống: {str(e)}")
+        
