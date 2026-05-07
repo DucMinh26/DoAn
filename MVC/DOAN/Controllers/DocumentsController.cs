@@ -129,28 +129,51 @@ namespace DOAN.Controllers
         public async Task<IActionResult> DeleteDocument(int id)
         {
 
-            //1. Tìm trong database
-            var document = await _context.Documents.FindAsync(id);
-
-            if (document == null)
+            try
             {
-                return NotFound($"Không tìm thấy tài liệu với ID = {id}");
+                //1. Tìm trong database
+                var document = await _context.Documents.FindAsync(id);
+
+                if (document == null)
+                {
+                    return NotFound($"Không tìm thấy tài liệu với ID = {id}");
+                }
+
+                // ====================================================================
+                // 2. GỌI SANG PYTHON ĐỂ XÓA VECTOR TRONG CHROMADB TRƯỚC
+                // ====================================================================
+                var aiEngineUrl = _configuration.GetValue<string>("aiEngineUrl");
+                var targetPoint = $"{aiEngineUrl}/api/documents/{id}";
+
+                using var client = _httpClientFactory.CreateClient();
+                var response = await client.DeleteAsync(targetPoint);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    return StatusCode(500, $"Lỗi khi xóa trí nhớ trên AI Engine: {errorBody}");
+                }
+
+                // ====================================================================
+                // 3. XÓA FILE VẬT LÝ VÀ DATABASE SQLITE (Code cũ)
+                // ====================================================================
+                if (System.IO.File.Exists(document.FilePath))
+                {
+                    System.IO.File.Delete(document.FilePath);
+                }
+
+                _context.Documents.Remove(document);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { Message = $"Đã xóa thành công tài liệu và bộ nhớ AI: {document.FileName}" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi server khi xóa tài liệu: {ex.Message}");
             }
 
-            //2. Xóa file vật lý trên ổ cứng
-            if (System.IO.File.Exists(document.FilePath))
-            {
-                System.IO.File.Delete(document.FilePath);
-            }
-
-            // 3. Xóa bản ghi trong Database
-            _context.Documents.Remove(document);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { Message = $"Đã xóa thành công tài liệu: {document.FileName}" });
         }
 
     }
-
 }
 
