@@ -4,21 +4,28 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using DOAN.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Http.Headers;
 
 
 namespace DOAN.Controllers
 {
+
+
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class DocumentsController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly string _uploadFolder;
+        private readonly String _uploadFolder;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
 
-        public DocumentsController(AppDbContext context)
+        public DocumentsController(AppDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _context = context;
+            _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
 
             //Directory.GetCurrentDirectory() tìm đến link lưu file vật lý
             //Path.Combine nối chuỗi thông minh
@@ -44,35 +51,69 @@ namespace DOAN.Controllers
                 return BadRequest("Hệ thống RAG hiện tại chỉ hỗ trợ phân tích file PDF");
             }
 
-            var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
-            var filePath = Path.Combine(_uploadFolder, uniqueFileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            try
             {
-                await file.CopyToAsync(stream);
+                var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
+                var filePath = Path.Combine(_uploadFolder, uniqueFileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                var uploaderName = User.FindFirstValue(ClaimTypes.Name) ?? "unknow";
+                var newDocument = new Document
+                {
+                    FileName = file.FileName,
+                    FilePath = filePath,
+                    UpLoadedBy = uploaderName,
+                    UpLoadDate = DateTime.UtcNow,
+                };
+
+                _context.Documents.Add(newDocument);
+                await _context.SaveChangesAsync();
+
+                var aiEngineUrl = _configuration.GetValue<string>("AiEngineUrl");
+                var targetEndpoint = $"{aiEngineUrl}/api/ingest";
+
+                using var client = _httpClientFactory.CreateClient();
+
+                // Mở lại file vật lý vừa lưu để chuẩn bị gửi đi
+                using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                using var requestContent = new MultipartFormDataContent();
+
+                //Đóng gói file
+                var streamContent = new StreamContent(fileStream);
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+                requestContent.Add(streamContent, "file", file.FileName);
+
+                //Đóng gói tham số document_id
+                var idContent = new StringContent(newDocument.Id.ToString());
+                requestContent.Add(idContent, "document_id");
+
+                //Gửi requesst Post sang Python
+                var response = await client.PostAsync(targetEndpoint, requestContent);
+                var responseString = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Ok(new
+                    {
+                        Message = "Upload và nạp dữ liệu cho AI thành công",
+                        DocumentId = newDocument.Id,
+                        FileName = newDocument.FileName,
+                        AiEngineResponse = responseString,
+                    });
+                }
+                else
+                {
+                    return StatusCode((int)response.StatusCode, $"Upload file lên ổ cứng thành công, nhưng lỗi khi nạp vào AI: {responseString}");
+                }
             }
-
-            var uploaderName = User.FindFirstValue(ClaimTypes.Name) ?? "Unknown";
-
-            var newDocument = new Document
+            catch (Exception ex)
             {
-                FileName = file.FileName,
-                FilePath = filePath,
-                UpLoadedBy = uploaderName,
-                UpLoadDate = DateTime.UtcNow
-
-            };
-
-            _context.Documents.Add(newDocument);
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                Message = "Upload tài liệu thành công",
-                DocumentId = newDocument.Id,
-                FileName = newDocument.FileName
-            });
-
+                return StatusCode(500, $"Lỗi server: {ex.Message}");
+            }
         }
 
         [HttpGet]

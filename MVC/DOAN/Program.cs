@@ -14,6 +14,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHttpClient();
 
 // 2. Cấu hình Swagger để thêm nút Ổ khóa (Authorize)
 builder.Services.AddSwaggerGen(options =>
