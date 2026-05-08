@@ -19,13 +19,20 @@ namespace DOAN.Controllers
             _configuration = configuration;
         }
 
+        public class ChatMessageDto
+        {
+            public string Role { get; set; } = string.Empty;
+            public string Content { get; set; } = string.Empty;
+
+        }
         public class ChatRequestDto
         {
             public string Query { get; set; } = string.Empty;
             public string? document_id { get; set; }
+            public List<ChatMessageDto> History { get; set; } = new List<ChatMessageDto>();
         }
 
-        [HttpPost]
+        [HttpPost("ask")]
         public async Task<IActionResult> AskAi([FromBody] ChatRequestDto request)
         {
             try
@@ -38,7 +45,12 @@ namespace DOAN.Controllers
                 {
                     query = request.Query,
                     document_id = request.document_id,
-                    top_k = 3
+                    top_k = 3,
+                    history = request.History.Select(h => new
+                    {
+                        role = h.Role.ToLower(),
+                        content = h.Content,
+                    }).ToList()
                 };
 
                 var jsonPayload = JsonSerializer.Serialize(payload);
