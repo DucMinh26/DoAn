@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG System</title>
+    <!-- Nhúng font chữ và icon -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Nhúng file CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- CỘT TRÁI: Quản lý tài liệu (Sidebar) -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fa-solid fa-robot"></i> Jarvis</h2>
+            </div>
+            
+            <div class="auth-section" id="authSection">
+                <p>Đăng nhập để quản lý file</p>
+                <input type="text" id="username" placeholder="Tên đăng nhập">
+                <input type="password" id="password" placeholder="Mật khẩu">
+                <button id="btnLogin" class="btn-primary">Đăng nhập</button>
+            </div>
+
+            <div class="upload-section hidden" id="uploadSection">
+                <h3>Tài liệu hệ thống</h3>
+                <div class="file-upload-box">
+                    <input type="file" id="fileInput" accept=".pdf">
+                    <button id="btnUpload" class="btn-secondary"><i class="fa-solid fa-upload"></i> Tải lên PDF</button>
+                </div>
+                <!-- Danh sách file sẽ được Javascript đổ vào đây -->
+                <ul class="document-list" id="documentList">
+                    <!-- Ví dụ giao diện 1 file -->
+                    <li><i class="fa-solid fa-file-pdf"></i> QuyChe_2025.pdf</li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- CỘT PHẢI: Giao diện Chat -->
+        <main class="chat-container">
+            <!-- Nơi chứa các tin nhắn -->
+            <div class="chat-history" id="chatHistory">
+                <div class="message ai-message">
+                    <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="content">Xin chào! Tôi là trợ lý AI. Tôi có thể giúp gì cho bạn hôm nay?</div>
+                </div>
+            </div>
+
+            <!-- Khu vực nhập câu hỏi -->
+            <div class="chat-input-area">
+                <select id="docSelector" class="doc-selector">
+                    <option value="">-- Tìm trong tất cả tài liệu --</option>
+                </select>
+                <div class="input-box">
+                    <input type="text" id="txtQuery" placeholder="Hỏi tôi bất cứ điều gì về tài liệu...">
+                    <button id="btnSend"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>

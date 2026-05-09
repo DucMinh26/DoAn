@@ -57,10 +57,17 @@ class SearchQuery(BaseModel): #khai báo lớp SearchQuery kế thừa BaseModel
     document_id: Optional[str] =None #khai báo id là str còn nếu để trống thì là None
     top_k: int=3
 
+class Message(BaseModel):
+    role: str
+    content: str
+
 class ChatQuery(BaseModel):
     query: str
     document_id: Optional[str] = None
     top_k: int=3
+    history: list[Message] = []
+
+
 # ==========================================
 # CÁC HÀM HỖ TRỢ (HELPER FUNCTIONS)
 # ==========================================
@@ -84,6 +91,7 @@ def chunk_text(text: str) ->list[str]:
     )
     chunks = text_splitter.split_text(text)
     return chunks
+
 
 # ==========================================
 # CÁC API ENDPOINTS
@@ -297,6 +305,13 @@ async def chat_with_document(request: ChatQuery):
         # ---------------------------------------------------------
         # BƯỚC 3: PROMPT ENGINEERING (Kỹ thuật đặt câu lệnh)
         # ---------------------------------------------------------
+        history_text = ""
+        if request.history and len(request.history) >0:
+            history_text = "Lịch sử trò chuyện:\n"
+            for msg in request.history:
+                sender = "User" if msg.role == "user" else "ai"
+                history_text += f"{sender}: {msg.content}"
+            history_text += "---------------------------------------------\n"
 
         prompt = f"""Bạn là một trợ lý ảo thông minh chuyên phân tích tài liệu nội bộ của doanh nghiệp.
         Nhiệm vụ của bạn là trả lời câu hỏi của người dùng một cách chính xác, lịch sự và dễ hiểu.
@@ -308,6 +323,9 @@ async def chat_with_document(request: ChatQuery):
 
         NGỮ CẢNH CUNG CẤP:
         {context_text}
+
+        LỊCH SỬ TRÒ CHUYỆN:
+        {history_text}
 
         CÂU HỎI CỦA NGƯỜI DÙNG:
         {request.query}
@@ -334,3 +352,21 @@ async def chat_with_document(request: ChatQuery):
     except Exception as e:
         print(f"Lỗi hệ thống: {str(e)}")
         
+@app.delete("/api/documents/{document_id}")
+async def delete_document_vectors(document_id: str):
+    try:
+        print(f"Nhận lệnh xóa toàn bộ Vector của document_id: {document_id}")
+
+        collection.delete(
+            where={"document_id":document_id}
+        )        
+
+        print("Đã xóa Vectors thành công")
+
+        return {
+            "status":"success",
+            "message":f"Đã xóa toàn bộ dữ liệu của tài liệu {document_id} khỏi bộ não AI"
+        }
+    except Exception as e:
+        print(f"Lỗi khi xóa: {str(e)}" )
+        raise HTTPException(status_code=500, detail=f"Lỗi khi xóa dữ liệu AI: {str(e)}")

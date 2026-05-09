@@ -1,0 +1,184 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: #f4f7f6;
+    height: 100vh;
+    display: flex;
+}
+
+.app-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+/* --- SIDEBAR TRÁI --- */
+.sidebar {
+    width: 300px;
+    background-color: #2c3e50;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.sidebar-header {
+    text-align: center;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #34495e;
+    margin-bottom: 20px;
+}
+
+.auth-section, .upload-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.auth-section input, .upload-section input[type="file"] {
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.btn-primary { background-color: #3498db; color: white; }
+.btn-primary:hover { background-color: #2980b9; }
+.btn-secondary { background-color: #2ecc71; color: white; }
+.btn-secondary:hover { background-color: #27ae60; }
+
+.document-list {
+    list-style: none;
+    margin-top: 15px;
+}
+.document-list li {
+    padding: 8px;
+    background-color: #34495e;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hidden { display: none !important; }
+
+/* --- MAIN CHAT PHẢI --- */
+.chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+}
+
+.chat-history {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.message {
+    display: flex;
+    gap: 15px;
+    max-width: 80%;
+}
+
+.user-message {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.ai-message .avatar { background-color: #10a37f; }
+.user-message .avatar { background-color: #3498db; }
+
+.content {
+    padding: 15px;
+    border-radius: 8px;
+    line-height: 1.5;
+    background-color: #f9f9f9;
+    border: 1px solid #e5e5e5;
+}
+
+.user-message .content {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+
+/* --- INPUT KHU VỰC CHAT --- */
+.chat-input-area {
+    padding: 20px;
+    background-color: #fff;
+    border-top: 1px solid #e5e5e5;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.doc-selector {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    width: 60%;
+}
+
+.input-box {
+    display: flex;
+    width: 60%;
+    position: relative;
+}
+
+#txtQuery {
+    width: 100%;
+    padding: 15px 50px 15px 20px;
+    border-radius: 25px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+    outline: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+#btnSend {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #10a37f;
+    color: white;
+    border: none;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+}
+#btnSend:hover { background: #0d8a6a; }
