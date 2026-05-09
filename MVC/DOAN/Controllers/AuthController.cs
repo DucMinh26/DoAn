@@ -60,7 +60,7 @@ public class AuthController : ControllerBase
 
         //3. Cấp thẻ thông hành
         string token = CreateToken(user);
-        return Ok(token);
+        return Ok(new { token = token });
     }
 
     private string CreateToken(User user)
@@ -80,12 +80,12 @@ public class AuthController : ControllerBase
 
         //3.tạo chữ kí điện tử
         var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(tokenSecret));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature); 
-        
-        
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+
+
         //4. Đóng gói token(thời hạn 1 ngày)
         var token = new JwtSecurityToken(
-            claims:claims,
+            claims: claims,
             expires: DateTime.Now.AddDays(1),
             signingCredentials: creds
         );
