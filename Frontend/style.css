@@ -182,3 +182,32 @@ body {
     font-size: 16px;
 }
 #btnSend:hover { background: #0d8a6a; }
+
+/* Style cho nút Đăng xuất */
+/* Nút Đăng xuất màu đỏ */
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+    width: 100%;
+}
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+/* Style cho số thứ tự */
+.stt {
+    font-weight: bold;
+    color: #ffd700; 
+    margin-right: 8px;
+    display: inline-block;
+    width: 20px; 
+}
+#chatHistoryUI {
+    scroll-behavior: smooth; /* Giúp hiệu ứng cuộn trông mượt hơn */
+}
