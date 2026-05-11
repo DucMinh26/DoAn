@@ -337,6 +337,8 @@ async def chat_with_document(request: ChatQuery):
 
         print("Đang gửi ngữ cảnh cho Gemini để tổng hợp câu trả lời...")
         model=genai.GenerativeModel("models/gemini-2.5-flash")
+        # model=genai.GenerativeModel("models/gemini-2.0-flash")
+
 
         rep = model.generate_content(prompt)
 
